@@ -1,0 +1,22 @@
+import { Serializer } from '@nestjs/microservices';
+
+export class OutboundEventSerializer implements Serializer {
+  serialize(value: any) {
+    // nest client-proxy class wraps the 2nd param of `emit` with a `data` property
+    if (!value.data) {
+      return value;
+    }
+    const { options, ...payload } = value.data;
+
+    return {
+      meta: {
+        ...(value.meta || {}),
+        transactionId: value.meta?.transactionId,
+        component: value.meta?.component || 'nestjs-nsq-transporter',
+        timestamp: new Date().toISOString(),
+      },
+      data: payload,
+      options: options || {},
+    };
+  }
+}
