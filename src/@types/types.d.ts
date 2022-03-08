@@ -14,7 +14,12 @@ declare module 'nsq-strategies' {
     strategy: any;
     connect(): Promise<any>;
     conns: any[];
-    produce(topic: any, msg: any, options: {}, callback: any): any;
+    produce(
+      topic: any,
+      msg: any,
+      options: Record<string, any>,
+      callback: any,
+    ): any;
     close(): void;
   }
   declare namespace Producer {

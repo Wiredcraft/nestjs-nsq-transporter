@@ -1,73 +1,99 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo_text.svg" width="320" alt="Nest Logo" /></a>
-</p>
+# Nestjs Transporter For NSQ
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Overview
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+This library provides a nestjs transporter by taking NSQ as its message broker. We could simply take the concept of a transporter as an event-driven framework as follows:
 
-## Description
+- As a message producer, I could send a message to NSQ to various topics by emitting various events based on the topic names.
+- As a message consumer, I could receive a message by subscribing to those emitted events.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+For more details on the overall
+architecture, please kinldy refer to this [article](https://dev.to/nestjs/integrate-nestjs-with-external-services-using-microservice-transporters-part-1-p3)
 
-## Installation
+## Restriction
 
-```bash
-$ npm install
+This library has not implement the request-response communication style and currently it only supports the event-dispatching styple.
+
+## Produce a message
+
+### Add the nsq client provider in your module's definition:
+
+```typescript
+import { DynamicModule, Module } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { ClientNsq, NsqOptions } from 'nestjs-nsq-transporter';
+
+@Module({
+  providers: [
+    {
+      provide: 'NSQ_CLIENT',
+      useFactory: (): ClientProxy => new ClientNsq(options),
+    }
+    SomeService,
+  ],
+})
+export class SomeModule {}
 ```
 
-## Running the app
+### Then you can inject the ClientNsq instance and use it to emit the message event:
 
-```bash
-# development
-$ npm run start
+```typescript
+import { Injectable } from '@nestjs/common';
 
-# watch mode
-$ npm run start:dev
+@Injectable()
+export class SomeService {
+  constructor(@Inject('NSQ_CLIENT') private nsqProducer: ClientNsq) {}
 
-# production mode
-$ npm run start:prod
+  sendMessage(topic: string, msg: any) {
+    return this.nsqProducer.emit(topic, msg);
+  }
+}
 ```
 
-## Test
+## Receive a message
 
-```bash
-# unit tests
-$ npm run test
+### Connect to the nsq microservice in your app and specify the nsq options as follows:
 
-# e2e tests
-$ npm run test:e2e
+```typescript
+import { MicroserviceOptions } from '@nestjs/microservices';
+import { serverNsq } from 'nestjs-nsq-transporter';
 
-# test coverage
-$ npm run test:cov
+app.connectMicroservice<MicroserviceOptions>({
+  strategy: new ServerNsq(options),
+});
 ```
 
-## Support
+### Then use @EventPattern to mark a function as the handler for messages from specific event pattern:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```typescript
+import { Injectable } from '@nestjs/common';
+import { EventPattern, Ctx, Payload } from '@nestjs/microservices';
 
-## Stay in touch
+@Injectable()
+export class SomeService {
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+  @EventPattern({
+    topic: 'topic1',
+    channel: 'channel1',
+  })
+  messageHandlerForTopic1(@Payload() payload: any, @Ctx() context: NsqContext)
+    // Handle messages
+  }
+}
+```
 
-## License
+## Definition of NsqOptions
 
-Nest is [MIT licensed](LICENSE).
+The `options` that passed to either `ServerNsq` or `ClientNsq` has the type as NsqOptions and the available fields are as folows:
+
+|      Field Name      | Is Required |                      Type                       |                                                                           Description                                                                            |              Example               |
+| :------------------: | :---------: | :---------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------: |
+| lookupdHTTPAddresses |     No      |                   `string[]`                    |                                                                http address list for nsq lookupds                                                                |    `['http://localhost:4161']`     |
+|       strategy       |     No      |          `'round_robin' or 'fan_out'`           |                                                                     message sending strategy                                                                     |           `round_robin`            |
+|    discardHandler    |     No      |              `(arg: any) => void`               |                                                      handler function to process when message is discarded                                                       |  `(arg: any) => console.log(arg)`  |
+|     maxInFlight      |     No      |                    `number`                     |                                                        The maximum number of messages to process at once                                                         |                `1`                 |
+|     requeueDelay     |     No      |                    `number`                     |                        The default amount of time (milliseconds) a message requeued should be delayed by before being dispatched by nsqd.                        |              `90000`               |
+| lookupdPollInterval  |     No      |                    `number`                     |                                                     The frequency in seconds for querying lookupd instances.                                                     |                `60`                |
+|     maxAttempts      |     No      |                    `number`                     | The number of times a given message will be attempted (given to MESSAGE handler) before it will be handed to the DISCARD handler and then automatically finished |                `3`                 |
+|      serializer      |     No      |      `Serializer in @nestjs/microservices`      |                             The instance of `Serializer` class which provides a `serialize` method to serialize the outbound message                             |  `serialize(value: any) => value`  |
+|     deserializer     |     No      | `ConsumerDeserializer in @nestjs/microservices` |                      The instance of `ConsumerDeserializer` class which provides a `deserialize` method to deserialize the inbound message                       | `deserialize(value: any) => value` |

@@ -30,7 +30,10 @@ export class AppController {
 
   @Post('/dispatch/:topic')
   @HttpCode(200)
-  disPatchNsq(@Param('topic') topic, @Body() msg: any): Observable<any> {
+  dispatchNsq(
+    @Param('topic') topic: string,
+    @Body() msg: any,
+  ): Observable<any> {
     return this.nsqProducer.emit(topic, msg);
   }
 
