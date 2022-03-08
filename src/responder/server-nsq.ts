@@ -42,7 +42,27 @@ export class ServerNsq extends Server implements CustomTransportStrategy {
     }
     c.reader.on('error', (err: Error) => {
       this.logger.error(
-        `consumer reader error: ${err}, topic: ${topic}, channel: ${channel}`,
+        `consumer reader on error: ${err}, topic: ${topic}, channel: ${channel}`,
+      );
+    });
+    c.reader.on('ready', () => {
+      this.logger.log(
+        `consumer reader on ready. topic: ${topic}, channel: ${channel}`,
+      );
+    });
+    c.reader.on('not_ready', () => {
+      this.logger.log(
+        `consumer reader on not ready. topic: ${topic}, channel: ${channel}`,
+      );
+    });
+    c.reader.on('nsqd_connected', (host: string, port: number) => {
+      this.logger.log(
+        `consumer reader on nsqd_connected. topic: ${topic}, channel: ${channel}, host: ${host}, port: ${port}`,
+      );
+    });
+    c.reader.on('nsqd_closed', (host: string, port: number) => {
+      this.logger.log(
+        `consumer reader on nsqd_closed. topic: ${topic}, channel: ${channel}, host: ${host}, port: ${port}`,
       );
     });
 
@@ -79,6 +99,9 @@ export class ServerNsq extends Server implements CustomTransportStrategy {
         const c = this.createConsumer(topic, channel, options);
         this.nsqConsumers.push(c);
         c.consume(async (msg: any) => {
+          this.logger.log(
+            `consumer reader on message: ${msg.body.toString()}, topic: ${topic}, channel: ${channel}`,
+          );
           const nsqCtx = new NsqContext([topic, channel, msg.id]);
           const packet = await this.deserializer.deserialize(msg, {
             topic,
@@ -88,11 +111,14 @@ export class ServerNsq extends Server implements CustomTransportStrategy {
             await handler(packet.data, nsqCtx);
             msg.finish();
           } catch (err) {
+            this.logger.error(
+              `consumer reader failed to process message with error: ${err}, topic: ${topic}, channel: ${channel}`,
+            );
             msg.requeue(this.options.requeueDelay || 90 * 1000);
           }
         });
       } else {
-        throw new Error('MessageHandler deocrator is not implemented');
+        throw new Error('MessageHandler decorator is not implemented');
       }
     });
   }
