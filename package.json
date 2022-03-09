@@ -13,6 +13,10 @@
     "nestjs",
     "transporter"
   ],
+  "files": [
+    "dist",
+    "!dist/tsconfig.build.tsbuildinfo"
+  ],
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "nest build",
