@@ -1,0 +1,8 @@
+dockers/
+src/
+test/
+.eslintrc.js
+.prettierrc
+nest-cli.json
+tsconfig.build.json
+tsconfig.json
