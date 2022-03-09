@@ -6,3 +6,4 @@ test/
 nest-cli.json
 tsconfig.build.json
 tsconfig.json
+dist/tsconfig.build.tsbuildinfo
