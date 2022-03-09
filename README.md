@@ -12,7 +12,7 @@ architecture, please kinldy refer to this [article](https://dev.to/nestjs/integr
 
 ## Restriction
 
-This library has not implement the request-response communication style and currently it only supports the event-dispatching styple.
+This library has not implemented the request-response communication style and currently it only supports the event-dispatching style.
 
 ## Produce a message
 

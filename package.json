@@ -2,9 +2,17 @@
   "name": "nestjs-nsq-transporter",
   "version": "0.0.1",
   "description": "",
-  "author": "",
-  "private": true,
-  "license": "UNLICENSED",
+  "author": "Wiredcraft",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Wiredcraft/nestjs-nsq-transporter.git"
+  },
+  "keywords": [
+    "nsq",
+    "nestjs",
+    "transporter"
+  ],
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "nest build",
