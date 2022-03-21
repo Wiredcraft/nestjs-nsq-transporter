@@ -1,3 +1,4 @@
+import { LoggerService, LogLevel } from '@nestjs/common';
 import { Serializer, ConsumerDeserializer } from '@nestjs/microservices';
 
 // TODO extend the CustomClientOptions?
@@ -12,4 +13,5 @@ export interface NsqOptions {
   maxAttempts?: number;
   serializer?: Serializer;
   deserializer?: ConsumerDeserializer;
+  logger?: LoggerService | LogLevel[] | false;
 }

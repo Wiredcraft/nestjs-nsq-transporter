@@ -1,6 +1,7 @@
 import { Server, CustomTransportStrategy } from '@nestjs/microservices';
 
 import { Consumer } from 'nsq-strategies';
+import { Logger } from '@nestjs/common';
 
 import { NsqOptions } from '../interfaces/nsq-options.interface';
 import { InboundMessageDeserializer } from './inbound-message-deserializer';
@@ -11,6 +12,7 @@ export class ServerNsq extends Server implements CustomTransportStrategy {
 
   constructor(private readonly options: NsqOptions) {
     super();
+    this.applyLogger(options);
 
     // super class establishes the serializer and deserializer; sets up
     // defaults unless overridden via `options`
@@ -18,6 +20,12 @@ export class ServerNsq extends Server implements CustomTransportStrategy {
       options.deserializer || new InboundMessageDeserializer();
     this.initializeSerializer(options);
     this.initializeDeserializer(options);
+  }
+  private applyLogger(options: NsqOptions) {
+    if (!options || options.logger == null) {
+      return;
+    }
+    Logger.overrideLogger(options.logger);
   }
 
   /**
