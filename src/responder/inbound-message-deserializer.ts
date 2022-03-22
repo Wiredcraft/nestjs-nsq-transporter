@@ -11,7 +11,6 @@ export class InboundMessageDeserializer implements ConsumerDeserializer {
     } catch (err) {
       msg = value;
     }
-    console.log('this.logger %o', this.logger);
 
     this.logger.verbose(
       `<<-- deserializing inbound message:\n

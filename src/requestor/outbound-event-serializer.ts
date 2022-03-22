@@ -6,13 +6,13 @@ export class OutboundEventSerializer implements Serializer {
     if (!value.data) {
       return value;
     }
-    const { options, ...payload } = value.data;
+    const { options, meta, ...payload } = value.data;
 
     return {
       meta: {
         ...(value.meta || {}),
-        transactionId: value.meta?.transactionId,
-        component: value.meta?.component || 'nestjs-nsq-transporter',
+        transactionId: meta?.transactionId,
+        component: meta?.component || 'nestjs-nsq-transporter',
         timestamp: new Date().toISOString(),
       },
       data: payload,

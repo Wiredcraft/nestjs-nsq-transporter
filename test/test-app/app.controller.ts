@@ -59,7 +59,7 @@ export class AppController {
   onEventPattern2(@Payload() payload: any, @Ctx() context: NsqContext): string {
     if (payload.data && payload.data.eventId) {
       this.onEventPatternCalls.set(payload.data.eventId, {
-        payload: payload.data,
+        payload: payload,
         context: context,
       });
     }
