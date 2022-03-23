@@ -14,7 +14,7 @@ export class InboundMessageDeserializer implements ConsumerDeserializer {
 
     this.logger.verbose(
       `<<-- deserializing inbound message:\n
-${msg}
+${JSON.stringify(msg)}
 \n\twith options: ${JSON.stringify(options)}`,
     );
     return {
