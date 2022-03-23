@@ -49,6 +49,18 @@ export class SomeService {
   }
 }
 ```
+**Notes**: You  can **not** blindly pass any key/value as the 2nd argument(`msg`) of the `emit` function because there are two special reserved keys: `meta` and `options`. The `meta` is used by the default `OutboundEventSerializer` to attach extra informations; `options` is for setting the [options](https://github.com/Wiredcraft/nsq-strategies#new-producerconnectconfig-option) for the nsq message producing, see the sample below.
+
+```typescript
+
+    this.nsqProducer.emit(topic,
+      { foo: 1, bar: 2, meta: { component: 'XYZ'}, options: {retry: { retries: 3 } }
+    );
+    // The `emit` above will send a nsq message with payload as follow with 3 times retry strategy.
+    { data: { foo: 1, bar: 2 }, meta: { component: 'XYZ'} }
+
+```
+
 
 ## Receive a message
 
