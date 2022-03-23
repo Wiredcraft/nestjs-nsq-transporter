@@ -10,7 +10,7 @@ export class OutboundEventSerializer implements Serializer {
 
     return {
       meta: {
-        ...(value.meta || {}),
+        ...(meta || {}),
         transactionId: meta?.transactionId,
         component: meta?.component || 'nestjs-nsq-transporter',
         timestamp: new Date().toISOString(),

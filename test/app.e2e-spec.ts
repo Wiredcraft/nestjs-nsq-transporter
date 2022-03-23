@@ -151,4 +151,30 @@ describe('AppController (e2e)', () => {
     expect(onEventPatternCall.payload.meta).toHaveProperty('timestamp');
     expect(onEventPatternCall.payload.meta.component).toBe('my-component');
   });
+  it('should be able to set custom meta', async () => {
+    const eventId = uuid();
+    await request(app.getHttpServer())
+      .post('/dispatch/topic04')
+      .send({
+        eventId,
+        ipsum: 'lorem04',
+        meta: { component: 'my-component', foo: 'bar' },
+      })
+      .expect(200);
+    let onEventPatternCall: { payload: any; context: NsqContext } | undefined;
+    while (!onEventPatternCall) {
+      await setTimeout(1000);
+      onEventPatternCall = controller.getOnEventPatternCall(eventId);
+    }
+    expect(onEventPatternCall).toBeDefined();
+    expect(onEventPatternCall.payload).toHaveProperty('data');
+    expect(onEventPatternCall.payload).toHaveProperty('meta');
+    expect(onEventPatternCall.payload.data).toEqual({
+      eventId,
+      ipsum: 'lorem04',
+    });
+    expect(onEventPatternCall.payload.meta).toHaveProperty('timestamp');
+    expect(onEventPatternCall.payload.meta.component).toBe('my-component');
+    expect(onEventPatternCall.payload.meta.foo).toBe('bar');
+  });
 });
