@@ -7,8 +7,13 @@ import {
   Body,
   HttpCode,
 } from '@nestjs/common';
-import { EventPattern, Ctx, Payload } from '@nestjs/microservices';
-import { Observable } from 'rxjs';
+import {
+  EventPattern,
+  Ctx,
+  Payload,
+  RpcException,
+} from '@nestjs/microservices';
+import { Observable, throwError } from 'rxjs';
 
 import { NsqContext, ClientNsq } from '../../src';
 
@@ -42,6 +47,9 @@ export class AppController {
     channel: 'channel01',
   })
   onEventPattern(@Payload() payload: any, @Ctx() context: NsqContext): string {
+    if (payload.eventId.endsWith('thrown')) {
+      throw new RpcException('a thrown error for test');
+    }
     if (payload.eventId) {
       this.onEventPatternCalls.set(payload.eventId, {
         payload: payload,

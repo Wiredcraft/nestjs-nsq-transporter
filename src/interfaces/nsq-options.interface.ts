@@ -15,3 +15,8 @@ export interface NsqOptions {
   deserializer?: ConsumerDeserializer;
   logger?: LoggerService | LogLevel[] | false;
 }
+
+export type NsqConsumerOptions = Pick<
+  NsqOptions,
+  'discardHandler' | 'requeueDelay' | 'maxAttempts' | 'lookupdPollInterval'
+>;

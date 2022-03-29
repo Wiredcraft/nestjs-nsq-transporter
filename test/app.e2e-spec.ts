@@ -14,6 +14,7 @@ describe('AppController (e2e)', () => {
   let app: INestApplication;
   let controller: AppController;
   let nsqd;
+  let mockDiscardHdlr;
   beforeAll(async () => {
     const nsqdHTTPAddress = 'http://localhost:4151';
     const lookupdHttpAddrs = ['http://localhost:4161'];
@@ -30,10 +31,14 @@ describe('AppController (e2e)', () => {
     }).compile();
     controller = moduleFixture.get<AppController>(AppController);
     app = moduleFixture.createNestApplication();
+    mockDiscardHdlr = jest.fn();
     app.connectMicroservice<MicroserviceOptions>({
       strategy: new ServerNsq({
         lookupdHTTPAddresses: lookupdHttpAddrs,
         lookupdPollInterval: 1,
+        maxAttempts: 1,
+        discardHandler: mockDiscardHdlr,
+        requeueDelay: 200,
       }),
     });
 
@@ -55,6 +60,19 @@ describe('AppController (e2e)', () => {
     expect(onEventPatternCall).toBeDefined();
     expect(onEventPatternCall.payload).toEqual({ eventId, foo: 'bar' });
   });
+  it('should be able to catch and re-queue', async () => {
+    const topic = 'topic01';
+    await nsqd.createTopic('topic01'); // otherwise it fails on the 1st time as topic does not exist
+    await setTimeout(1500); // wait 1.5s for consumer polls the topic
+    const eventId = uuid() + 'thrown';
+    await nsqd.publish(topic, { eventId, foo: 'bar' });
+    let discardCalled = mockDiscardHdlr.mock.calls.length;
+    while (discardCalled === 0) {
+      await setTimeout(500);
+      discardCalled = mockDiscardHdlr.mock.calls.length;
+    }
+    expect(discardCalled).toBe(1);
+  }, 10000);
 
   it('should be able to dispatch event', async () => {
     await request(app.getHttpServer())

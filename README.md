@@ -87,9 +87,13 @@ export class SomeService {
   @EventPattern({
     topic: 'topic1',
     channel: 'channel1',
+    options: { // optional
+      maxAttempts: 3
+    }
   })
   messageHandlerForTopic1(@Payload() payload: any, @Ctx() context: NsqContext)
     // Handle messages
+    // Notes: if you throw an Error from this messageHandler, it's better to use `RpcException` so that we have explicit log in nsq-transporter.
   }
 }
 ```

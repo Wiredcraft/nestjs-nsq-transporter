@@ -3,9 +3,14 @@ import { Server, CustomTransportStrategy } from '@nestjs/microservices';
 import { Consumer } from 'nsq-strategies';
 import { Logger } from '@nestjs/common';
 
-import { NsqOptions } from '../interfaces/nsq-options.interface';
+import {
+  NsqConsumerOptions,
+  NsqOptions,
+} from '../interfaces/nsq-options.interface';
 import { InboundMessageDeserializer } from './inbound-message-deserializer';
 import { NsqContext } from './nsq-context';
+import { firstValueFrom, isObservable, EMPTY, catchError } from 'rxjs';
+const CONSUME_ERR = Symbol();
 
 export class ServerNsq extends Server implements CustomTransportStrategy {
   private nsqConsumers: Consumer[];
@@ -42,11 +47,12 @@ export class ServerNsq extends Server implements CustomTransportStrategy {
   private createConsumer(
     topic: string,
     channel: string,
-    options: any,
+    options: NsqConsumerOptions,
   ): Consumer {
-    const c = new Consumer(topic, channel, options || this.options);
-    if (this.options.discardHandler) {
-      c.reader.on('discard', this.options.discardHandler);
+    const c = new Consumer(topic, channel, options);
+
+    if (options.discardHandler) {
+      c.reader.on('discard', options.discardHandler);
     }
     c.reader.on('error', (err: Error) => {
       this.logger.error(
@@ -104,7 +110,11 @@ export class ServerNsq extends Server implements CustomTransportStrategy {
       if (handler.isEventHandler) {
         const { topic, channel, options } = JSON.parse(pattern);
 
-        const c = this.createConsumer(topic, channel, options);
+        const consumerOptions = this.transformToConsumerOptions(options);
+
+        const DEFAULT_REQUEUE_DELAY = 90 * 1000;
+        const c = this.createConsumer(topic, channel, consumerOptions);
+
         this.nsqConsumers.push(c);
         c.consume(async (msg: any) => {
           this.logger.log(
@@ -115,20 +125,44 @@ export class ServerNsq extends Server implements CustomTransportStrategy {
             topic,
             channel,
           });
+          let source;
           try {
-            await handler(packet.data, nsqCtx);
-            msg.finish();
+            source = await handler(packet.data, nsqCtx);
+            if (!isObservable(source)) {
+              return msg.finish();
+            }
           } catch (err) {
             this.logger.error(
-              `consumer reader failed to process message with error: ${err}, topic: ${topic}, channel: ${channel}`,
+              `consumer reader failed to process message with error: ${err.message}, topic: ${topic}, channel: ${channel}`,
             );
-            msg.requeue(this.options.requeueDelay || 90 * 1000);
+            msg.requeue(consumerOptions.requeueDelay || DEFAULT_REQUEUE_DELAY);
+          }
+
+          const wrappedErrObservable = source.pipe(
+            catchError((err, caught) => {
+              this.logger.error(
+                `consumer reader failed to process message with Observable error: ${err.message}, topic: ${topic}, channel: ${channel}`,
+              );
+              return EMPTY;
+            }),
+          );
+          const first = await firstValueFrom(wrappedErrObservable, {
+            defaultValue: CONSUME_ERR,
+          });
+          if (first === CONSUME_ERR) {
+            msg.requeue(consumerOptions.requeueDelay || DEFAULT_REQUEUE_DELAY);
+          } else {
+            msg.finish();
           }
         });
       } else {
         throw new Error('MessageHandler decorator is not implemented');
       }
     });
+  }
+
+  private transformToConsumerOptions(options: NsqOptions): NsqConsumerOptions {
+    return Object.assign({}, this.options, options);
   }
 
   /**
