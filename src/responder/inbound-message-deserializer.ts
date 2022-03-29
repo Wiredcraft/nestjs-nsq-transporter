@@ -5,21 +5,21 @@ export class InboundMessageDeserializer implements ConsumerDeserializer {
   private readonly logger = new Logger('InboundMessageIdentityDeserializer');
 
   deserialize(value: any, options?: Record<string, any>): IncomingRequest {
-    let msg;
+    let json;
+
     try {
-      msg = value.json();
-    } catch (err) {
-      msg = value;
-    }
+      json = value.json();
+    } catch (err) {}
 
     this.logger.verbose(
       `<<-- deserializing inbound message:\n
-${JSON.stringify(msg)}
+${(json && JSON.stringify(json)) || value.body}
 \n\twith options: ${JSON.stringify(options)}`,
     );
+
     return {
-      id: msg.id,
-      data: msg,
+      id: value.id,
+      data: json || value.body,
       pattern: options,
     };
   }

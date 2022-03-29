@@ -136,6 +136,7 @@ export class ServerNsq extends Server implements CustomTransportStrategy {
               `consumer reader failed to process message with error: ${err.message}, topic: ${topic}, channel: ${channel}`,
             );
             msg.requeue(consumerOptions.requeueDelay || DEFAULT_REQUEUE_DELAY);
+            return;
           }
 
           const wrappedErrObservable = source.pipe(

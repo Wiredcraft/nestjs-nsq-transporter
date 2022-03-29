@@ -81,8 +81,8 @@ app.connectMicroservice<MicroserviceOptions>({
 import { Injectable } from '@nestjs/common';
 import { EventPattern, Ctx, Payload } from '@nestjs/microservices';
 
-@Injectable()
-export class SomeService {
+@Controller()
+export class AppController {
 
   @EventPattern({
     topic: 'topic1',

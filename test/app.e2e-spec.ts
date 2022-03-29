@@ -72,6 +72,7 @@ describe('AppController (e2e)', () => {
       discardCalled = mockDiscardHdlr.mock.calls.length;
     }
     expect(discardCalled).toBe(1);
+    mockDiscardHdlr.mockClear();
   }, 10000);
 
   it('should be able to dispatch event', async () => {
