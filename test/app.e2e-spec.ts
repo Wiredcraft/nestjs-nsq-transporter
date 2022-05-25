@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { MicroserviceOptions } from '@nestjs/microservices';
+import { ClientProxy, MicroserviceOptions } from '@nestjs/microservices';
 import * as request from 'supertest';
 import { AppModule } from './test-app/app.module';
 import { NsqContext, ServerNsq } from '../src';
@@ -14,6 +14,7 @@ describe('AppController (e2e)', () => {
   let app: INestApplication;
   let controller: AppController;
   let nsqd;
+  let nsqClient: ClientProxy;
   let mockDiscardHdlr;
   beforeAll(async () => {
     const nsqdHTTPAddress = 'http://localhost:4151';
@@ -30,6 +31,7 @@ describe('AppController (e2e)', () => {
       ],
     }).compile();
     controller = moduleFixture.get<AppController>(AppController);
+    nsqClient = moduleFixture.get<ClientProxy>('NSQ_CLIENT');
     app = moduleFixture.createNestApplication();
     mockDiscardHdlr = jest.fn();
     app.connectMicroservice<MicroserviceOptions>({
@@ -44,6 +46,10 @@ describe('AppController (e2e)', () => {
 
     await app.startAllMicroservices();
     await app.init();
+  });
+  afterAll(async () => {
+    await nsqClient.close();
+    await app.close();
   });
 
   it('should be able to receive msg with eventPattern', async () => {
@@ -60,6 +66,22 @@ describe('AppController (e2e)', () => {
     expect(onEventPatternCall).toBeDefined();
     expect(onEventPatternCall.payload).toEqual({ eventId, foo: 'bar' });
   });
+
+  it('should be able to finish msg with EMPTY returned', async () => {
+    const topic = 'topic01';
+    await nsqd.createTopic('topic01'); // otherwise it fails on the 1st time as topic does not exist
+    await setTimeout(1500); // wait 1.5s for consumer polls the topic
+    const eventId = uuid() + 'return-empty';
+    await nsqd.publish(topic, { eventId, foo: 'bar' });
+    let onEventPatternCall: { payload: any; context: NsqContext } | undefined;
+    while (!onEventPatternCall) {
+      await setTimeout(1000);
+      onEventPatternCall = controller.getOnEventPatternCall(eventId);
+    }
+    expect(onEventPatternCall).toBeDefined();
+    expect(onEventPatternCall.payload).toEqual({ eventId, foo: 'bar' });
+  });
+
   it('should be able to catch and re-queue', async () => {
     const topic = 'topic01';
     await nsqd.createTopic('topic01'); // otherwise it fails on the 1st time as topic does not exist
