@@ -13,7 +13,7 @@ import {
   Payload,
   RpcException,
 } from '@nestjs/microservices';
-import { Observable, throwError } from 'rxjs';
+import { EMPTY, Observable } from 'rxjs';
 
 import { NsqContext, ClientNsq } from '../../src';
 
@@ -46,7 +46,10 @@ export class AppController {
     topic: 'topic01',
     channel: 'channel01',
   })
-  onEventPattern(@Payload() payload: any, @Ctx() context: NsqContext): string {
+  onEventPattern(
+    @Payload() payload: any,
+    @Ctx() context: NsqContext,
+  ): Observable<never> | string {
     if (payload.eventId.endsWith('thrown')) {
       throw new RpcException('a thrown error for test');
     }
@@ -55,6 +58,9 @@ export class AppController {
         payload: payload,
         context: context,
       });
+    }
+    if (payload.eventId.endsWith('return-empty')) {
+      return EMPTY;
     }
 
     return 'Event: Ok';

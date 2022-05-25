@@ -60,6 +60,22 @@ describe('AppController (e2e)', () => {
     expect(onEventPatternCall).toBeDefined();
     expect(onEventPatternCall.payload).toEqual({ eventId, foo: 'bar' });
   });
+
+  it('should be able to finish msg with EMPTY returned', async () => {
+    const topic = 'topic01';
+    await nsqd.createTopic('topic01'); // otherwise it fails on the 1st time as topic does not exist
+    await setTimeout(1500); // wait 1.5s for consumer polls the topic
+    const eventId = uuid() + 'return-empty';
+    await nsqd.publish(topic, { eventId, foo: 'bar' });
+    let onEventPatternCall: { payload: any; context: NsqContext } | undefined;
+    while (!onEventPatternCall) {
+      await setTimeout(1000);
+      onEventPatternCall = controller.getOnEventPatternCall(eventId);
+    }
+    expect(onEventPatternCall).toBeDefined();
+    expect(onEventPatternCall.payload).toEqual({ eventId, foo: 'bar' });
+  });
+
   it('should be able to catch and re-queue', async () => {
     const topic = 'topic01';
     await nsqd.createTopic('topic01'); // otherwise it fails on the 1st time as topic does not exist

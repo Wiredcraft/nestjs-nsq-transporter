@@ -9,8 +9,7 @@ import {
 } from '../interfaces/nsq-options.interface';
 import { InboundMessageDeserializer } from './inbound-message-deserializer';
 import { NsqContext } from './nsq-context';
-import { firstValueFrom, isObservable, EMPTY, catchError } from 'rxjs';
-const CONSUME_ERR = Symbol();
+import { firstValueFrom, isObservable, Observable } from 'rxjs';
 
 export class ServerNsq extends Server implements CustomTransportStrategy {
   private nsqConsumers: Consumer[];
@@ -87,7 +86,7 @@ export class ServerNsq extends Server implements CustomTransportStrategy {
    * kick things off
    */
   public start(callback: () => void) {
-    // register faye message handlers
+    // register message handlers
     this.bindHandlers();
 
     // call any user-supplied callback from `app.listen()` call
@@ -125,12 +124,9 @@ export class ServerNsq extends Server implements CustomTransportStrategy {
             topic,
             channel,
           });
-          let source;
+          let source: Promise<any> | Observable<any>;
           try {
             source = await handler(packet.data, nsqCtx);
-            if (!isObservable(source)) {
-              return msg.finish();
-            }
           } catch (err) {
             this.logger.error(
               `consumer reader failed to process message with error: ${err.message}, topic: ${topic}, channel: ${channel}`,
@@ -138,23 +134,23 @@ export class ServerNsq extends Server implements CustomTransportStrategy {
             msg.requeue(consumerOptions.requeueDelay || DEFAULT_REQUEUE_DELAY);
             return;
           }
-
-          const wrappedErrObservable = source.pipe(
-            catchError((err, caught) => {
-              this.logger.error(
-                `consumer reader failed to process message with Observable error: ${err.message}, topic: ${topic}, channel: ${channel}`,
-              );
-              return EMPTY;
-            }),
-          );
-          const first = await firstValueFrom(wrappedErrObservable, {
-            defaultValue: CONSUME_ERR,
-          });
-          if (first === CONSUME_ERR) {
-            msg.requeue(consumerOptions.requeueDelay || DEFAULT_REQUEUE_DELAY);
-          } else {
-            msg.finish();
+          if (!isObservable(source)) {
+            // call finish if resoved promise
+            return msg.finish();
           }
+          try {
+            await firstValueFrom(source);
+          } catch (err) {
+            if (err.name === 'EmptyError') {
+              return msg.finish();
+            }
+            this.logger.error(
+              `consumer reader failed to process message with Observable error: ${err.message}, topic: ${topic}, channel: ${channel}`,
+            );
+            msg.requeue(consumerOptions.requeueDelay || DEFAULT_REQUEUE_DELAY);
+            return;
+          }
+          msg.finish();
         });
       } else {
         throw new Error('MessageHandler decorator is not implemented');
