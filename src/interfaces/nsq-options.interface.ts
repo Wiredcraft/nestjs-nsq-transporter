@@ -21,3 +21,5 @@ export type NsqConsumerOptions = Pick<
   NsqOptions,
   'discardHandler' | 'requeueDelay' | 'maxAttempts' | 'lookupdPollInterval'
 >;
+
+export { PRODUCER_STRATEGY };

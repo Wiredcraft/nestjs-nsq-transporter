@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { ClientProxy, MicroserviceOptions } from '@nestjs/microservices';
 import * as request from 'supertest';
 import { AppModule } from './test-app/app.module';
-import { NsqContext, ServerNsq } from '../src';
+import { NsqContext, PRODUCER_STRATEGY, ServerNsq } from '../src';
 import { Nsqd } from 'nsq-strategies';
 import { setTimeout } from 'timers/promises';
 import { v4 as uuid } from 'uuid';
@@ -26,6 +26,7 @@ describe('AppController (e2e)', () => {
         AppModule.configure({
           client: {
             lookupdHTTPAddresses: lookupdHttpAddrs,
+            strategy: PRODUCER_STRATEGY.ROUND_ROBIN,
           },
         }),
       ],
