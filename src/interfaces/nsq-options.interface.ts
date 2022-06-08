@@ -1,11 +1,12 @@
 import { LoggerService, LogLevel } from '@nestjs/common';
 import { Serializer, ConsumerDeserializer } from '@nestjs/microservices';
+import { PRODUCER_STRATEGY } from 'nsq-strategies';
 
 // TODO extend the CustomClientOptions?
 // TODO split with producer/consumer options?
 export interface NsqOptions {
   lookupdHTTPAddresses?: string[];
-  strategy?: string; // FIXME with Producer.strategy enum
+  strategy?: PRODUCER_STRATEGY;
   discardHandler?: (arg: any) => void;
   maxInFlight?: number;
   requeueDelay?: number;
