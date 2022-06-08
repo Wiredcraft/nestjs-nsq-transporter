@@ -4,7 +4,7 @@ import { ClientProxy, MicroserviceOptions } from '@nestjs/microservices';
 import * as request from 'supertest';
 import { AppModule } from './test-app/app.module';
 import { NsqContext, ServerNsq } from '../src';
-import { api } from 'nsq-strategies';
+import { Nsqd } from 'nsq-strategies';
 import { setTimeout } from 'timers/promises';
 import { v4 as uuid } from 'uuid';
 import { AppController } from './test-app/app.controller';
@@ -20,7 +20,7 @@ describe('AppController (e2e)', () => {
     const nsqdHTTPAddress = 'http://localhost:4151';
     const lookupdHttpAddrs = ['http://localhost:4161'];
 
-    nsqd = new api.Nsqd(nsqdHTTPAddress);
+    nsqd = new Nsqd(nsqdHTTPAddress);
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
         AppModule.configure({

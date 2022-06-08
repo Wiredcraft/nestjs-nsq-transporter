@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { ClientProxy, ReadPacket, WritePacket } from '@nestjs/microservices';
 
-import { Producer } from 'nsq-strategies';
+import { Producer, PRODUCER_STRATEGY } from 'nsq-strategies';
 import { NsqOptions } from '../interfaces/nsq-options.interface';
 import { OutboundEventSerializer } from './outbound-event-serializer';
 
@@ -31,20 +31,7 @@ export class ClientNsq extends ClientProxy {
     const serializedPacket = this.serializer.serialize(packet);
 
     const { data, meta, options } = serializedPacket;
-
-    return new Promise<void>((resolve, reject) => {
-      this.producer.produce(
-        pattern,
-        { meta, data },
-        options,
-        (err: unknown) => {
-          if (err) {
-            reject(err);
-          }
-          resolve();
-        },
-      );
-    });
+    return this.producer.produce(pattern, { meta, data }, options);
   }
 
   /**
@@ -62,7 +49,7 @@ export class ClientNsq extends ClientProxy {
     if (this.producer) {
       return this.producer;
     }
-    const { lookupdHTTPAddresses, strategy = Producer.ROUND_ROBIN } =
+    const { lookupdHTTPAddresses, strategy = PRODUCER_STRATEGY.ROUND_ROBIN } =
       this.options;
     const producer = new Producer({ lookupdHTTPAddresses }, { strategy });
     await producer.connect();

@@ -51,33 +51,11 @@ export class ServerNsq extends Server implements CustomTransportStrategy {
     const c = new Consumer(topic, channel, options);
 
     if (options.discardHandler) {
-      c.reader.on('discard', options.discardHandler);
+      const consumer$ = c.toRx('discard');
+      consumer$.subscribe((msg) => {
+        return options.discardHandler(msg);
+      });
     }
-    c.reader.on('error', (err: Error) => {
-      this.logger.error(
-        `consumer reader on error: ${err}, topic: ${topic}, channel: ${channel}`,
-      );
-    });
-    c.reader.on('ready', () => {
-      this.logger.log(
-        `consumer reader on ready. topic: ${topic}, channel: ${channel}`,
-      );
-    });
-    c.reader.on('not_ready', () => {
-      this.logger.log(
-        `consumer reader on not ready. topic: ${topic}, channel: ${channel}`,
-      );
-    });
-    c.reader.on('nsqd_connected', (host: string, port: number) => {
-      this.logger.log(
-        `consumer reader on nsqd_connected. topic: ${topic}, channel: ${channel}, host: ${host}, port: ${port}`,
-      );
-    });
-    c.reader.on('nsqd_closed', (host: string, port: number) => {
-      this.logger.log(
-        `consumer reader on nsqd_closed. topic: ${topic}, channel: ${channel}, host: ${host}, port: ${port}`,
-      );
-    });
 
     return c;
   }
